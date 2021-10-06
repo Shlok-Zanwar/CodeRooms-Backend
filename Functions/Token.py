@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, status
 
 SECRET_KEY = "ApnaSecretBhidu"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 500
+ACCESS_TOKEN_EXPIRE_MINUTES = 5000
 
 def createAccessToken(data: dict):
     to_encode = data.copy()

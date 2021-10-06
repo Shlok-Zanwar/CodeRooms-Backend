@@ -43,10 +43,12 @@ def sendOtp(email):
     except Exception as e:
         # Print any error messages to stdout
         print(e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Unable to send OTP.")
 
 def createSignUp(request, db: Session):
     newUser = models.User(
-            name = request.name,
+            fname = request.firstName,
+            lname = request.lastName,
             email = request.email,
             password = bcryptPassword(request.password),
             username = request.username,
@@ -89,7 +91,7 @@ def verifyEmail(request, db: Session):
         db.add(user)
         db.commit()
         db.refresh(user)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid OTP 0 tries left. Sending new OTP to {user.email}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid OTP. Sending new OTP to {user.email}")
 
     else:
         user._try = user._try + 1

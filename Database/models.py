@@ -9,7 +9,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     username = Column(String, unique=True)
-    name = Column(String)
+    fname = Column(String)
+    lname = Column(String)
     email = Column(String, unique=True)
     password = Column(String)
     otp = Column(String)

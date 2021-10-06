@@ -14,7 +14,8 @@ get_db = database.get_db
 
 
 class UserSignupSchema (BaseModel):
-    name: str
+    firstName: str
+    lastName: str
     email: str
     password: str
     username: str
@@ -45,13 +46,14 @@ def handleSignUp(
 ):
     return AuthFunctions.createSignUp(request, db)
 
-
+import time
 @router.post('/verify_email')
 def verifyEmail(
     # request: Request,
     request: VerifyEmailSchema,
     db: Session = Depends(get_db)
 ):
+    time.sleep(2)
     return AuthFunctions.verifyEmail(request, db)
 
 
