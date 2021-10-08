@@ -18,7 +18,7 @@ def createNewRoom(tokenData, db: Session):
     db.refresh(newRoom)
 
     myRooms = getMyRooms(tokenData, db)['myRooms']
-    print(newRoom)
+    # print(newRoom)
     return {"newRoomId": newRoom.id, "myRooms": myRooms}
 
 
@@ -117,7 +117,8 @@ def updateRoomById(roomId, roomData, tokenData, db: Session):
         "visibility": room.visibility,
         "waitingRoomEnabled": room.waitingRoomEnabled,
     }
+    myRooms = getMyRooms(tokenData, db)['myRooms']
 
-    return {"roomInfo": roomInfo}
+    return {"roomInfo": roomInfo, "myRooms": myRooms}
 
 
