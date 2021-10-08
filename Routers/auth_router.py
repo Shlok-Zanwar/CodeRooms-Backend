@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from Functions import AuthFunctions
 from pydantic import BaseModel
 from typing import  Optional, List
+import time
 
 router = APIRouter(
     tags=['Auth'],
@@ -46,7 +47,6 @@ def handleSignUp(
 ):
     return AuthFunctions.createSignUp(request, db)
 
-import time
 @router.post('/verify_email')
 def verifyEmail(
     # request: Request,
