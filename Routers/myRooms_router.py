@@ -4,11 +4,11 @@ from sqlalchemy.orm import Session
 from Functions.Token import getCurrentUser
 from pydantic import BaseModel
 from typing import  Optional, List
-from Functions.DataFunctions import getMyRooms, createNewRoom, getRoomById, updateRoomById
+from Functions.MyRoomsFunctions import getMyRooms, createNewRoom, getRoomById, updateRoomById
 import time
 
 router = APIRouter(
-    tags=['Data'],
+    tags=['My Rooms'],
     # prefix="/auth"
 )
 
@@ -43,6 +43,7 @@ def myRooms(
     time.sleep(2)
     try:
         tokenData = getCurrentUser(request.headers['Authorization'])
+        print(tokenData)
     except:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
 

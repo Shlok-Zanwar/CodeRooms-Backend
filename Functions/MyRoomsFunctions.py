@@ -6,6 +6,13 @@ from sqlalchemy.sql import text
 from datetime import datetime
 import random
 
+def getEnrolledCount(roomId, db: Session):
+    return db.execute(text(f"""
+        SELECT COUNT(*) 
+        FROM RoomMembers 
+        WHERE roomId = {roomId} AND inWaitingRoom = FALSE AND isRejected = FALSE;
+    """)).fetchone()[0]
+
 def createNewRoom(tokenData, db: Session):
     newRoom = models.Rooms(
         ownerId = tokenData['userId'],
@@ -24,10 +31,10 @@ def createNewRoom(tokenData, db: Session):
 
 def getMyRooms(tokenData, db: Session):
     myRooms = db.execute(text(f"""
-        SELECT R.id, R.name, R.visibility, R.enrolled, COUNT(Q.id) AS questionsCount 
+        SELECT R.id, R.name, R.visibility, COUNT(Q.id) AS questionsCount 
         FROM Rooms R
         LEFT JOIN Questions Q on R.id = Q.roomId
-        WHERE R.ownerId = {tokenData['userId']}
+        WHERE R.ownerId = {tokenData['userId']} AND R.isDeleted = FALSE
         GROUP BY R.id
     """))
 
@@ -39,8 +46,8 @@ def getMyRooms(tokenData, db: Session):
             "roomId": row[0],
             "roomName": row[1],
             "visibility": row[2],
-            "enrolled": row[3],
-            "questions": row[4],
+            "questions": row[3],
+            "enrolled": getEnrolledCount(row[0], db),
         })
 
     return {"myRooms": data}
@@ -48,14 +55,13 @@ def getMyRooms(tokenData, db: Session):
 
 def getRoomById(roomId, tokenData, db: Session):
     myRoom = db.execute(text(f"""
-        SELECT id, ownerId, name, visibility, enrolled, waitingRoomEnabled FROM Rooms
-        WHERE id = {roomId}
+        SELECT id, ownerId, name, visibility, waitingRoomEnabled FROM Rooms
+        WHERE id = {roomId} AND isDeleted = FALSE
     """))
 
     sqlData = myRoom.fetchone()
-    print(tokenData['userId'])
-    if not sqlData:
 
+    if not sqlData:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Room not found.")
 
     if tokenData['userId'] != sqlData[1]: #Index 1 is ownerId
@@ -67,29 +73,40 @@ def getRoomById(roomId, tokenData, db: Session):
         "roomId": sqlData[0],
         "roomName": sqlData[2],
         "visibility": sqlData[3],
-        "enrolled": sqlData[4],
-        "waitingRoomEnabled": sqlData[5] == 1,
+        "waitingRoomEnabled": sqlData[4] == 1,
+        "enrolled": getEnrolledCount(roomId, db),
     }
 
-    print(sqlData)
+    # print(sqlData)
+    # roomQuestions = db.execute(text(f"""
+    #         SELECT Q.id, Q.title, Q.isVisible, COUNT(DISTINCT S.userId)
+    #         FROM Questions Q
+    #         LEFT OUTER JOIN Submissions S on Q.id = S.questionId
+    #         WHERE Q.roomId = {roomId} AND Q.isDeleted = FALSE
+    #         AND S.isDeleted = FALSE
+    #         GROUP BY Q.id
+    #     """))
 
     roomQuestions = db.execute(text(f"""
-        SELECT Q.id, Q.title, Q.isVisible, COUNT(DISTINCT S.userId) 
+        SELECT id, title, isVisible
         FROM Questions Q 
-        LEFT JOIN Submissions S on Q.id = S.questionId
-        WHERE Q.roomId = {roomId}
-        GROUP BY Q.id
+        WHERE roomId = {roomId} AND isDeleted = FALSE 
+        GROUP BY id
     """))
 
-    sqlData = roomQuestions.fetchall()
+    questionData = roomQuestions.fetchall()
     questions = []
-    for row in sqlData:
+    for row in questionData:
         print(row)
         questions.append({
             "questionId": row[0],
             "title": row[1],
             "isVisible": row[2],
-            "submitted": row[3]
+            "submitted": db.execute(text(f"""
+                SELECT COUNT(DISTINCT userId) 
+                FROM Submissions 
+                WHERE questionId = {row[0]} AND Submissions.isDeleted = FALSE
+            """)).fetchone()[0]
         })
 
     return {"roomInfo": roomInfo, "questions": questions}

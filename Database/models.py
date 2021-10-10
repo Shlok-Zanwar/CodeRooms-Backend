@@ -11,13 +11,15 @@ class Users(Base):
     username = Column(String, unique=True)
     fname = Column(String)
     lname = Column(String)
-    email = Column(String, unique=True)
-    password = Column(String)
+    email = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
     otp = Column(String)
     isVerified = Column(Boolean, nullable=False, default=False)
     _try = Column(Integer, nullable=False, default=0)
     createdAt = Column(DateTime)
     verifiedAt = Column(DateTime)
+
+    isDeleted = Column(Boolean, nullable=False, default=False)
 
 class Rooms(Base):
     __tablename__ = 'Rooms'
@@ -25,11 +27,12 @@ class Rooms(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     ownerId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     name = Column(String)
-    enrolled = Column(Integer, nullable=False, default=0)
+    # enrolled = Column(Integer, nullable=False, default=0)
     waitingRoomEnabled = Column(Boolean, nullable=False, default=False)
     visibility = Column(String, nullable=False, default="private") # public/private/hidden
     createdAt = Column(DateTime, default=datetime.now())
 
+    isDeleted = Column(Boolean, nullable=False, default=False)
     specialFields = Column(JSON)
     # specialFields = [
     #     {
@@ -49,16 +52,8 @@ class RoomMembers(Base):
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     joinedAt = Column(DateTime)
     specialFields = Column(JSON)
-
-
-class WaitingRoom(Base):
-    __tablename__ = 'WaitingRoom'
-
-    id = Column(Integer, primary_key=True, index=True, nullable=False)
-    roomId = Column(Integer, ForeignKey("Rooms.id"), nullable=False)
-    userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
-    joinedAt = Column(DateTime)
-    specialFields = Column(JSON)
+    inWaitingRoom = Column(Boolean, nullable=False)
+    isRejected = Column(Boolean, nullable=False)
 
 
 class Questions(Base):
@@ -80,6 +75,8 @@ class Questions(Base):
     noOfTestCases = Column(Integer)
     submissionCountAllowed = Column(Integer) #no of submissions allowed
 
+    isDeleted = Column(Boolean, nullable=False, default=False)
+
 class Submissions(Base):
     __tablename__ = 'Submissions'
 
@@ -89,4 +86,7 @@ class Submissions(Base):
     code = Column(String)
     testCasesPassed = Column(Integer)
     submittedAt = Column(DateTime)
+
+    isDeleted = Column(Boolean, nullable=False, default=False)
+
 
