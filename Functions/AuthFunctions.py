@@ -1,3 +1,4 @@
+import pytz
 from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
@@ -59,7 +60,7 @@ def createSignUp(request, db: Session):
             username = request.username,
             otp = sendOtp(request.email),
             isVerified = False,
-            createdAt = datetime.now()
+            createdAt = datetime.now(pytz.timezone('Asia/Kolkata'))
         )
 
     try:
@@ -85,7 +86,7 @@ def verifyEmail(request, db: Session):
         user.isVerified = True
         user.otp = None
         user._try = 0
-        user.verifiedAt = datetime.now()
+        user.verifiedAt = datetime.now(pytz.timezone('Asia/Kolkata'))
         # db.add(user)
         db.commit()
         db.refresh(user)

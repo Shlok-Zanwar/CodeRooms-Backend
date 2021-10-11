@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
@@ -5,6 +7,8 @@ from Functions.Token import getCurrentUser
 from sqlalchemy.sql import text
 from datetime import datetime
 import random
+import pytz
+
 
 def getEnrolledCount(roomId, db: Session):
     return db.execute(text(f"""
@@ -13,11 +17,19 @@ def getEnrolledCount(roomId, db: Session):
         WHERE roomId = {roomId} AND inWaitingRoom = FALSE AND isRejected = FALSE;
     """)).fetchone()[0]
 
+def getWaitingRoomCount(roomId, db: Session):
+    return db.execute(text(f"""
+        SELECT COUNT(*) 
+        FROM RoomMembers 
+        WHERE roomId = {roomId} AND inWaitingRoom = TRUE AND isRejected = FALSE;
+    """)).fetchone()[0]
+
 def createNewRoom(tokenData, db: Session):
     newRoom = models.Rooms(
         ownerId = tokenData['userId'],
         name = "New Room" + str(random.randint(1, 100)),
-        createdAt = datetime.now()
+        createdAt = datetime.now(pytz.timezone('Asia/Kolkata')),
+        specialFields = []
     )
 
     db.add(newRoom)
@@ -31,7 +43,7 @@ def createNewRoom(tokenData, db: Session):
 
 def getMyRooms(tokenData, db: Session):
     myRooms = db.execute(text(f"""
-        SELECT R.id, R.name, R.visibility, COUNT(Q.id) AS questionsCount 
+        SELECT R.id, R.name, R.visibility, COUNT(Q.id) AS questionsCount
         FROM Rooms R
         LEFT JOIN Questions Q on R.id = Q.roomId
         WHERE R.ownerId = {tokenData['userId']} AND R.isDeleted = FALSE
@@ -55,7 +67,8 @@ def getMyRooms(tokenData, db: Session):
 
 def getRoomById(roomId, tokenData, db: Session):
     myRoom = db.execute(text(f"""
-        SELECT id, ownerId, name, visibility, waitingRoomEnabled FROM Rooms
+        SELECT id, ownerId, name, visibility, waitingRoomEnabled, specialFields
+        FROM Rooms
         WHERE id = {roomId} AND isDeleted = FALSE
     """))
 
@@ -75,17 +88,9 @@ def getRoomById(roomId, tokenData, db: Session):
         "visibility": sqlData[3],
         "waitingRoomEnabled": sqlData[4] == 1,
         "enrolled": getEnrolledCount(roomId, db),
+        "waitingRoomCount": getWaitingRoomCount(roomId, db),
+        "specialFields": json.loads(sqlData[5])
     }
-
-    # print(sqlData)
-    # roomQuestions = db.execute(text(f"""
-    #         SELECT Q.id, Q.title, Q.isVisible, COUNT(DISTINCT S.userId)
-    #         FROM Questions Q
-    #         LEFT OUTER JOIN Submissions S on Q.id = S.questionId
-    #         WHERE Q.roomId = {roomId} AND Q.isDeleted = FALSE
-    #         AND S.isDeleted = FALSE
-    #         GROUP BY Q.id
-    #     """))
 
     roomQuestions = db.execute(text(f"""
         SELECT id, title, isVisible
@@ -118,24 +123,103 @@ def updateRoomById(roomId, roomData, tokenData, db: Session):
     if not room:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Room does not exist.")
 
+    if room.isDeleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid room id.")
+
     if room.ownerId != tokenData['userId']:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this room.")
 
+    # print(roomData)
     room.name = roomData.roomName
     room.visibility = roomData.visibility
     room.waitingRoomEnabled = roomData.waitingRoomEnabled
+    room.specialFields = roomData.specialFields
 
     db.commit()
     db.refresh(room)
+
+    if not roomData.waitingRoomEnabled:
+        members = db.execute(text(f"""
+                    SELECT id FROM RoomMembers 
+                    WHERE roomId = {roomId} AND inWaitingRoom = TRUE AND isRejected = FALSE 
+                """)).fetchall()
+
+
+        for member in members:
+            print(member)
+            db.execute(text(f"""
+                        UPDATE RoomMembers
+                        SET inWaitingRoom = False
+                        WHERE id = {member[0]}
+                    """))
+            db.commit()
+
 
     roomInfo = {
         "roomId": room.id,
         "roomName": room.name,
         "visibility": room.visibility,
         "waitingRoomEnabled": room.waitingRoomEnabled,
+        "enrolled": getEnrolledCount(roomId, db),
+        "waitingRoomCount": getWaitingRoomCount(roomId, db)
     }
     myRooms = getMyRooms(tokenData, db)['myRooms']
 
     return {"roomInfo": roomInfo, "myRooms": myRooms}
 
+
+def getRoomMembers(roomId, tokenData, waiting, db: Session, ):
+    room = db.query(models.Rooms).filter(models.Rooms.id == roomId).first()
+
+    if not room:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Room does not exist.")
+
+    if room.isDeleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid room id.")
+
+    if room.ownerId != tokenData['userId']:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this room.")
+
+    roomMembers = db.execute(text(f"""
+                    SELECT U.id, U.username, U.email, U.fname, U.lname, Rm.id, Rm.specialFields
+                    FROM RoomMembers RM
+                    LEFT JOIN Users U on U.id = RM.userId
+                    WHERE RM.roomId = {roomId} AND RM.isRejected = FALSE AND RM.inWaitingRoom = {waiting}
+                    GROUP BY U.id
+                """)).fetchall()
+
+    members = []
+    for member in roomMembers:
+        members.append({
+            "userId": member[0],
+            "userName": member[1],
+            "email": member[2],
+            "name": member[3] + " " + member[4],
+            "tableId": member[5],
+            "specialFields": json.loads(member[6])
+        })
+
+    return members
+
+
+def modifyRoomMember(roomId, userId, tokenData, reject, db: Session):
+    room = db.query(models.Rooms).filter(models.Rooms.id == roomId).first()
+
+    if not room:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Room does not exist.")
+
+    if room.isDeleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid room id.")
+
+    if room.ownerId != tokenData['userId']:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this room.")
+
+    db.execute(text(f"""
+                        UPDATE RoomMembers
+                        SET isRejected = {reject}, inWaitingRoom = FALSE
+                        WHERE userId = {userId} AND roomId = {roomId}
+                    """))
+    db.commit()
+
+    return True
 
