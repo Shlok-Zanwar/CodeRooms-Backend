@@ -69,10 +69,9 @@ class Questions(Base):
 
     _type = Column(String)                          # Code, eg:-form .....
 
-    title = Column(String, nullable=False)
-    template = Column(JSON, nullable=False)
-    testCases = Column(JSON)
-    noOfTestCases = Column(Integer)
+    title = Column(String, nullable=False, default="String")
+    template = Column(JSON, nullable=False, default=[])
+    testCases = Column(JSON, nullable=False, default=[])
     submissionCountAllowed = Column(Integer) #no of submissions allowed
 
     isDeleted = Column(Boolean, nullable=False, default=False)
@@ -85,8 +84,20 @@ class Submissions(Base):
     questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
     code = Column(String)
     testCasesPassed = Column(Integer)
+    language = Column(String)
     submittedAt = Column(DateTime)
 
     isDeleted = Column(Boolean, nullable=False, default=False)
+
+class SavedCodes(Base):
+    __tablename__ = 'SavedCodes'
+
+    id = Column(Integer, primary_key=True, index=True, nullable=False)
+    userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
+    questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
+    code = Column(String)
+    language = Column(String)
+    savedAt = Column(DateTime)
+
 
 
