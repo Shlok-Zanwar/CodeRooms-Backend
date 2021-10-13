@@ -8,7 +8,6 @@ from email.message import EmailMessage
 import smtplib, ssl
 import random
 from datetime import datetime
-from sqlalchemy.sql import text
 
 
 def sendMail(message):
@@ -51,6 +50,7 @@ def sendOtp(email):
     sendMail(msg)
     return otp
 
+
 def createSignUp(request, db: Session):
     newUser = models.Users(
             fname = request.firstName,
@@ -72,6 +72,7 @@ def createSignUp(request, db: Session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Username or email already exists.")
 
     return newUser
+
 
 def verifyEmail(request, db: Session):
     user = db.query(models.Users).filter(models.Users.email == request.email).first()
@@ -107,6 +108,7 @@ def verifyEmail(request, db: Session):
         db.commit()
         db.refresh(user)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid OTP {3-user._try} tries left.")
+
 
 def handleLogin(request, db: Session):
     user = db.query(models.Users).filter(models.Users.username == request.username).first()

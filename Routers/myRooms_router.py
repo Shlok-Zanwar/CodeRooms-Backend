@@ -3,8 +3,9 @@ from Database import database, models
 from sqlalchemy.orm import Session
 from Functions.Token import getCurrentUser
 from pydantic import BaseModel
-from typing import  Optional, List
-from Functions.MyRoomsFunctions import getMyRooms, createNewRoom, getRoomById, updateRoomById, getRoomMembers, modifyRoomMember
+from typing import Optional, List
+from Functions.MyRoomsFunctions import getMyRooms, createNewRoom, getRoomById, updateRoomById, getRoomMembers, \
+    modifyRoomMember, getQuestionSubmission, getSubmittedCode
 import time
 
 router = APIRouter(
@@ -15,7 +16,7 @@ router = APIRouter(
 get_db = database.get_db
 
 
-class UpdateRoomInfoSchema (BaseModel):
+class UpdateRoomInfoSchema(BaseModel):
     roomName: str
     visibility: str
     waitingRoomEnabled: bool
@@ -68,10 +69,10 @@ def roomById(
 
 @router.post('/update_room/{roomId}')
 def updateRoomData(
-    request: Request,
-    roomId,
-    roomData: UpdateRoomInfoSchema,
-    db: Session = Depends(get_db),
+        request: Request,
+        roomId,
+        roomData: UpdateRoomInfoSchema,
+        db: Session = Depends(get_db),
 ):
     time.sleep(2)
     try:
@@ -81,6 +82,34 @@ def updateRoomData(
 
     return updateRoomById(roomId, roomData, tokenData, db)
 
+
+@router.get("/question_submissions")
+def questionSubmissions(
+        questionId: int,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    time.sleep(2)
+    try:
+        tokenData = getCurrentUser(request.headers['Authorization'])
+    except:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
+
+    return getQuestionSubmission(questionId, tokenData, db)
+
+@router.get("/get_submitted_code")
+def submittedCodeGet(
+        submissionId: int,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    time.sleep(2)
+    # try:
+    #     tokenData = getCurrentUser(request.headers['Authorization'])
+    # except:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
+
+    return getSubmittedCode(submissionId, db)
 
 
 @router.get('/room_members/{roomId}')
@@ -97,6 +126,7 @@ def roomMembers(
 
     return getRoomMembers(roomId, tokenData, False, db)
 
+
 @router.get('/room_waiting/{roomId}')
 def roomMembers(
         roomId,
@@ -110,6 +140,7 @@ def roomMembers(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
 
     return getRoomMembers(roomId, tokenData, True, db)
+
 
 @router.get('/remove_room_member')
 def removeMember(

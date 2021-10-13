@@ -17,12 +17,14 @@ def getEnrolledCount(roomId, db: Session):
         WHERE roomId = {roomId} AND inWaitingRoom = FALSE AND isRejected = FALSE;
     """)).fetchone()[0]
 
+
 def getWaitingRoomCount(roomId, db: Session):
     return db.execute(text(f"""
         SELECT COUNT(*) 
         FROM RoomMembers 
         WHERE roomId = {roomId} AND inWaitingRoom = TRUE AND isRejected = FALSE;
     """)).fetchone()[0]
+
 
 def createNewRoom(tokenData, db: Session):
     newRoom = models.Rooms(
@@ -93,7 +95,7 @@ def getRoomById(roomId, tokenData, db: Session):
     }
 
     roomQuestions = db.execute(text(f"""
-        SELECT id, title, isVisible
+        SELECT id, title, isVisible, endTime
         FROM Questions Q 
         WHERE roomId = {roomId} AND isDeleted = FALSE 
         GROUP BY id
@@ -107,6 +109,7 @@ def getRoomById(roomId, tokenData, db: Session):
             "questionId": row[0],
             "title": row[1],
             "isVisible": row[2],
+            "endTime": row[3],
             "submitted": db.execute(text(f"""
                 SELECT COUNT(DISTINCT userId) 
                 FROM Submissions 
@@ -200,6 +203,91 @@ def getRoomMembers(roomId, tokenData, waiting, db: Session, ):
         })
 
     return members
+
+
+def getSubmittedCode(subId, db: Session):
+    # submission = db.query(models.Submissions).filter(models.Submissions.id == subId).first()
+    subData = db.execute(text(f"""
+                            SELECT code, language FROM Submissions WHERE id={subId}
+                        """)).fetchone()
+
+    if not subData:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid submission Id.")
+
+    data = {
+        "code": subData.code,
+        "language": subData.language,
+    }
+
+    return {"data": data}
+
+
+def getQuestionSubmission(questionId, tokenData, db: Session):
+    question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
+    if not question:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
+
+    room = db.query(models.Rooms).filter(models.Rooms.id == question.roomId).first()
+    if not room:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Room does not exist.")
+
+    if room.isDeleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid room id.")
+
+    if room.ownerId != tokenData['userId']:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this question.")
+
+
+    roomDetails = {
+        "roomName": room.name,
+        "roomId": room.id,
+        "specialFields": room.specialFields
+    }
+    questionDetails = {
+        "title": question.title,
+        "template": question.template,
+        "endTime": question.endTime,
+        "testCases": len(question.testCases)
+    }
+
+    roomMembers = db.execute(text(f"""
+                        SELECT U.id, U.username, U.email, U.fname, U.lname, Rm.specialFields
+                        FROM RoomMembers RM
+                        LEFT JOIN Users U on U.id = RM.userId
+                        WHERE RM.roomId = {room.id} AND RM.isRejected = FALSE AND RM.inWaitingRoom = FALSE
+                        GROUP BY U.id
+                    """)).fetchall()
+    print(roomMembers)
+
+    members = []
+    for member in roomMembers:
+        subData = db.execute(text(f"""
+                        SELECT id, testCasesPassed, submittedAt FROM Submissions WHERE userId={member[0]} AND questionId = {questionId}
+                    """)).fetchone()
+
+        print(subData)
+
+        if not subData:
+            subId = 0
+            tCasesPassed = 0
+            stime = 0
+        else:
+            subId = subData[0]
+            tCasesPassed = subData[1]
+            stime = subData[2]
+
+        members.append({
+            "userId": member[0],
+            "userName": member[1],
+            "email": member[2],
+            "name": member[3] + " " + member[4],
+            "specialFields": json.loads(member[5]),
+            "submissionId": subId,
+            "tCasesPassed": tCasesPassed,
+            "submittedAt": stime
+        })
+
+    return {"roomDetails": roomDetails, "questionDetails": questionDetails, "enrolled": members}
 
 
 def modifyRoomMember(roomId, userId, tokenData, reject, db: Session):

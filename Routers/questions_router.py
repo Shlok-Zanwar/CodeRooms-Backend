@@ -7,7 +7,7 @@ from Functions.Token import getCurrentUser
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 from Functions.QuestionFunctions import createNewQuestion, sendQuestionDetails, saveQuestionTemplate, saveTestCases, \
-    saveQuestionSettings, getQuestionForUser, saveCodeForQuestion, getDueQuestions
+    saveQuestionSettings, getQuestionForUser, saveCodeForQuestion, getDueQuestions, runCode, submitCodeForQuestion
 import time
 
 router = APIRouter(
@@ -16,6 +16,24 @@ router = APIRouter(
 )
 
 get_db = database.get_db
+
+
+class RunCodeSchema(BaseModel):
+    code: str
+    language: str
+    input: str
+
+@router.post('/run_code')
+def runGivenCode(
+        schema:RunCodeSchema,
+        request:Request,
+):
+    try:
+        tokenData = getCurrentUser(request.headers['Authorization'])
+    except:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
+
+    return runCode(schema.language,schema.code, schema.input)
 
 
 @router.get('/due_questions')
@@ -132,7 +150,7 @@ class SaveCodeSchema(BaseModel):
 
 
 @router.post('/save_question_code')
-def saveSettings(
+def saveCode(
         schema: SaveCodeSchema,
         request: Request,
         db: Session = Depends(get_db)
@@ -145,6 +163,21 @@ def saveSettings(
 
     # return saveQuestionTemplate(questionId, json.loads(questionTemplate), tokenData, db)
     return saveCodeForQuestion(schema.questionId, schema.code, schema.language, tokenData, db)
+
+@router.post('/submit_question_code')
+def saveCode(
+        schema: SaveCodeSchema,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    # time.sleep(2)
+    try:
+        tokenData = getCurrentUser(request.headers['Authorization'])
+    except:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
+
+    # return saveQuestionTemplate(questionId, json.loads(questionTemplate), tokenData, db)
+    return submitCodeForQuestion(schema.questionId, schema.code, schema.language, tokenData, db)
 
 
 @router.get('/question_user')

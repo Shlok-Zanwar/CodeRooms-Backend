@@ -9,6 +9,9 @@ import pytz
 
 
 def runCode(language, code, input):
+    if language == "python":
+        language = "py"
+
     url = 'https://codexweb.netlify.app/.netlify/functions/enforceCode'
     myobj = {
         "code": code,
@@ -25,18 +28,20 @@ def runCode(language, code, input):
     )
 
     if x.status_code == 200:
+        print(x.text)
         return x.text
-
 
 
 def getDueQuestions(tokenData, db: Session):
     dueData = db.execute(text(f"""
-                    SELECT Q.id, Q.roomId, Q.title, Q.endTime
-                    FROM Questions Q WHERE roomId = (SELECT roomId FROM RoomMembers WHERE userId = {tokenData['userId']})
+                    SELECT Q.id, Q.roomId, Q.title, Q.endTime, R.name
+                    FROM Questions Q 
+                    LEFT JOIN Rooms R on R.id = Q.roomId
+                    WHERE roomId = (SELECT roomId FROM RoomMembers WHERE userId = {tokenData['userId']})
                     AND NOT EXISTS(
                         SELECT *
                         FROM Submissions S
-                        WHERE S.id = {tokenData['userId']} AND S.questionId = Q.id
+                        WHERE S.userId = {tokenData['userId']} AND S.questionId = Q.id
                     )
                 """)).fetchall()
 
@@ -47,9 +52,11 @@ def getDueQuestions(tokenData, db: Session):
             "roomId": question[1],
             "title": question[2],
             "endTime": question[3],
+            "roomName": question[4],
         })
 
     return {"due": questions}
+
 
 def createNewQuestion(roomId, tokenData, db: Session):
     room = db.query(models.Rooms).filter(models.Rooms.id == roomId).first()
@@ -79,6 +86,7 @@ def createNewQuestion(roomId, tokenData, db: Session):
 
     # print(newRoom)
     return {"newQuestionId": newQuestion.id}
+
 
 def sendQuestionDetails(questionId, tokenData, db: Session):
     question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
@@ -110,8 +118,6 @@ def sendQuestionDetails(questionId, tokenData, db: Session):
     return {"questionDetails": questionDetails}
 
 
-
-
 def saveQuestionTemplate(questionId, template, tokenData, db: Session):
     question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
     if not question:
@@ -137,6 +143,7 @@ def saveQuestionTemplate(questionId, template, tokenData, db: Session):
     # db.refresh(question)
 
     return True
+
 
 def saveTestCases(questionId, cases, tokenData, db: Session):
     question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
@@ -183,6 +190,54 @@ def saveQuestionSettings(questionId, settings, tokenData, db: Session):
     return True
 
 
+def submitCodeForQuestion(questionId, code, language, tokenData, db: Session):
+    question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
+
+    if not question or not question.isVisible:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
+
+    casesPassed = 0
+    for case in question.testCases:
+        if json.loads(runCode(language, code, case['input']))['output'] == case['output']:
+            casesPassed += 1
+
+    submittedCode = db.execute(text(f"""
+                        SELECT id FROM Submissions 
+                        WHERE questionId={questionId} AND userId={tokenData['userId']}
+                    """)).fetchone()
+
+    if submittedCode == None:
+        newEntry = models.Submissions(
+            userId=tokenData['userId'],
+            questionId=questionId,
+            code=code,
+            submittedAt=datetime.now(pytz.timezone('Asia/Kolkata')),
+            language=language,
+            testCasesPassed=casesPassed,
+        )
+        db.add(newEntry)
+        db.commit()
+        # db.refresh(newEntry)
+    else:
+        db.execute(text(f"""
+                                DELETE FROM Submissions WHERE id = {submittedCode[0]}
+                            """))
+
+        newEntry = models.Submissions(
+            userId=tokenData['userId'],
+            questionId=questionId,
+            code=code,
+            submittedAt=datetime.now(pytz.timezone('Asia/Kolkata')),
+            language=language,
+            testCasesPassed=casesPassed,
+        )
+        db.add(newEntry)
+        db.commit()
+
+    saveCodeForQuestion(questionId, code, language, tokenData, db)
+
+    return f"{casesPassed} out of {len(question.testCases)} cases passed."
+
 
 def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
     question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
@@ -195,7 +250,7 @@ def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
                     WHERE questionId={questionId} AND userId={tokenData['userId']}
                 """)).fetchone()
 
-    if not savedCode:
+    if savedCode == None:
         newEntry = models.SavedCodes(
            userId = tokenData['userId'],
            questionId = questionId,
@@ -208,17 +263,30 @@ def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
         # db.refresh(newEntry)
     else:
         db.execute(text(f"""
-                            UPDATE SavedCodes
-                            SET code = {code},
-                            savedAt = {datetime.now(pytz.timezone('Asia/Kolkata'))},
-                            language = {language}
-                            WHERE id={savedCode[0]}
+                            DELETE FROM SavedCodes WHERE id = {savedCode[0]}
                         """))
+
+        newEntry = models.SavedCodes(
+            userId=tokenData['userId'],
+            questionId=questionId,
+            code=code,
+            savedAt=datetime.now(pytz.timezone('Asia/Kolkata')),
+            language=language
+        )
+        db.add(newEntry)
         db.commit()
 
+
+        # db.execute(text(f"""
+        #                     UPDATE SavedCodes
+        #                     SET code = {code},
+        #                     savedAt = {datetime.now(pytz.timezone('Asia/Kolkata'))},
+        #                     language = {language}
+        #                     WHERE id={savedCode[0]}
+        #                 """))
+        # db.commit()
+
     return True
-
-
 
 
 def getQuestionForUser(questionId, tokenData, db: Session):
@@ -273,8 +341,6 @@ def getQuestionForUser(questionId, tokenData, db: Session):
     }
 
     return {"details": questionDetails}
-
-
 
 
 # C++	cpp

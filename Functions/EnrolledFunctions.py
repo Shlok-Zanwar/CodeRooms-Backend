@@ -112,6 +112,7 @@ def getEnrolledRoomById(roomId, tokenData, db: Session):
     extraInfo = db.execute(text(f"""
         SELECT R.ownerId, R.name, U.fname,U.lname 
         FROM Rooms R JOIN Users U on R.ownerId = U.id
+        WHERE R.id = {roomId}
         GROUP BY R.ownerId
         """)).fetchone()
 
@@ -134,7 +135,7 @@ def getEnrolledRoomById(roomId, tokenData, db: Session):
         })
 
     roomInfo = {
-        "id": roomId,
+        "roomId": roomId,
         "host": extraInfo[2] + " " + extraInfo[3],
         "roomName": extraInfo[1]
     }
