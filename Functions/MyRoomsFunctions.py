@@ -311,3 +311,39 @@ def modifyRoomMember(roomId, userId, tokenData, reject, db: Session):
 
     return True
 
+
+def deleteCurrentRoom(roomId,tokenData,db):
+    room = db.query(models.Rooms).filter(models.Rooms.id == roomId).first()
+
+    if not room:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Room does not exist.")
+
+    if room.isDeleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid room id.")
+
+    if room.ownerId != tokenData['userId']:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this room.")
+
+    db.execute(text(f"""
+        DELETE  FROM Submissions 
+        WHERE questionId=(SELECT id FROM Questions WHERE  roomId={roomId})
+    """))
+    db.execute(text(f"""
+        DELETE  FROM SavedCodes 
+        WHERE questionId=(SELECT id FROM Questions WHERE  roomId={roomId})
+    """))
+    db.execute(text(f"""
+        DELETE FROM RoomMembers
+        WHERE roomId={roomId}
+    """))
+    db.execute(text(f"""
+        DELETE FROM Questions
+        WHERE roomId={roomId}
+    """))
+    db.execute(text(f"""
+        DELETE FROM Rooms 
+        WHERE id={roomId}
+    """))
+
+    db.commit()
+    return True

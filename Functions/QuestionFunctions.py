@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
 from sqlalchemy.sql import text
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 
@@ -21,8 +21,8 @@ def runCode(language, code, input):
 
     x = requests.post(
         url,
-        data = json.dumps(myobj),
-        headers = {
+        data=json.dumps(myobj),
+        headers={
             'Content-Type': 'application/json'
         }
     )
@@ -32,18 +32,62 @@ def runCode(language, code, input):
         return x.text
 
 
+def deleteCurrentQuestion(questionId, tokenData, db):
+    question = db.query(models.Questions).filter(models.Questions.id == questionId).first()
+    if not question:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
+
+    if not question.createdBy == tokenData['userId']:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Cannot delete Question.")
+
+    db.execute(text(f"""
+       DELETE  FROM Submissions 
+       WHERE questionId={questionId}
+   """))
+    db.execute(text(f"""
+       DELETE  FROM SavedCodes 
+       WHERE questionId={questionId}
+   """))
+    db.execute(text(f"""
+        DELETE FROM Questions
+        WHERE id={questionId}
+    """))
+    db.commit()
+    return True
+
+
 def getDueQuestions(tokenData, db: Session):
-    dueData = db.execute(text(f"""
-                    SELECT Q.id, Q.roomId, Q.title, Q.endTime, R.name
-                    FROM Questions Q 
-                    LEFT JOIN Rooms R on R.id = Q.roomId
-                    WHERE roomId = (SELECT roomId FROM RoomMembers WHERE userId = {tokenData['userId']})
-                    AND NOT EXISTS(
-                        SELECT *
-                        FROM Submissions S
-                        WHERE S.userId = {tokenData['userId']} AND S.questionId = Q.id
-                    )
-                """)).fetchall()
+    allRooms = db.execute(text(f"""
+        SELECT roomId FROM RoomMembers WHERE userId = {tokenData['userId']}
+    """)).fetchall()
+
+    allQuestions = []
+    for room in allRooms:
+        q = db.execute(text(f"""
+                        SELECT Q.id, Q.roomId, Q.title, Q.endTime, R.name
+                        FROM Questions Q 
+                        LEFT JOIN Rooms R on R.id = Q.roomId
+                        WHERE roomId = {room[0]}
+                    """)).fetchall()
+        allQuestions.extend(q)
+
+    print(allQuestions)
+    dueData = []
+    for question in allQuestions:
+        print("qid", question[0])
+        print(db.execute(text(f"""
+                SELECT COUNT(*)
+                FROM Submissions S
+                WHERE S.userId = {tokenData['userId']} AND S.questionId = {question[0]}
+            """)).fetchone()[0])
+        if (
+                db.execute(text(f"""
+                SELECT COUNT(*)
+                FROM Submissions S
+                WHERE S.userId = {tokenData['userId']} AND S.questionId = {question[0]}
+            """)).fetchone()[0] == 0
+        ):
+            dueData.append(question)
 
     questions = []
     for question in dueData:
@@ -71,18 +115,20 @@ def createNewQuestion(roomId, tokenData, db: Session):
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this room.")
 
     newQuestion = models.Questions(
-        roomId = roomId,
-        createdBy = tokenData['userId'],
-        title = "Title",
-        createdAt = datetime.now(pytz.timezone('Asia/Kolkata')),
-        template = {},
-        testCases = [],
+        roomId=roomId,
+        createdBy=tokenData['userId'],
+        title="Title",
+        createdAt=datetime.now(pytz.timezone('Asia/Kolkata')),
+        template={},
+        testCases=[],
+        endTime=datetime.now(tz=pytz.timezone('Asia/Kolkata')).replace(hour=23, minute=59, second=59) + timedelta(
+            days=7)
+
     )
 
     db.add(newQuestion)
     db.commit()
     db.refresh(newQuestion)
-
 
     # print(newRoom)
     return {"newQuestionId": newQuestion.id}
@@ -182,7 +228,8 @@ def saveQuestionSettings(questionId, settings, tokenData, db: Session):
     if room.ownerId != tokenData['userId']:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You do not own this question.")
 
-    question.endTime = pytz.timezone('Asia/Kolkata').localize(datetime.strptime(settings['endTime'], "%Y-%m-%d %H:%M:%S"))
+    question.endTime = pytz.timezone('Asia/Kolkata').localize(
+        datetime.strptime(settings['endTime'], "%Y-%m-%d %H:%M:%S"))
     question.isVisible = settings['isVisible']
 
     db.commit()
@@ -252,11 +299,11 @@ def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
 
     if savedCode == None:
         newEntry = models.SavedCodes(
-           userId = tokenData['userId'],
-           questionId = questionId,
-           code = code,
-           savedAt = datetime.now(pytz.timezone('Asia/Kolkata')),
-            language = language
+            userId=tokenData['userId'],
+            questionId=questionId,
+            code=code,
+            savedAt=datetime.now(pytz.timezone('Asia/Kolkata')),
+            language=language
         )
         db.add(newEntry)
         db.commit()
@@ -275,7 +322,6 @@ def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
         )
         db.add(newEntry)
         db.commit()
-
 
         # db.execute(text(f"""
         #                     UPDATE SavedCodes
@@ -306,7 +352,6 @@ def getQuestionForUser(questionId, tokenData, db: Session):
     if room.ownerId == tokenData['userId']:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You cannot answer your question.")
 
-
     isAllowed = db.execute(text(f"""
                 SELECT * FROM RoomMembers 
                 WHERE roomId={question.roomId} AND userId={tokenData['userId']} AND isRejected=FALSE AND inWaitingRoom=FALSE
@@ -315,7 +360,7 @@ def getQuestionForUser(questionId, tokenData, db: Session):
     if not isAllowed:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
 
-    savedCode =  db.execute(text(f"""
+    savedCode = db.execute(text(f"""
                 SELECT code, language FROM SavedCodes 
                 WHERE questionId={questionId} AND userId={tokenData['userId']}
             """)).fetchone()
@@ -326,8 +371,6 @@ def getQuestionForUser(questionId, tokenData, db: Session):
     else:
         code = savedCode[0]
         language = savedCode[1]
-
-
 
     questionDetails = {
         "id": question.id,
@@ -351,3 +394,51 @@ def getQuestionForUser(questionId, tokenData, db: Session):
 # Ruby	rb
 # Kotlin	kt
 # Swift	swift
+
+
+a = a = {
+    "description": {
+        "blocks": [
+            {
+                 "key": "aliq6",
+                 "text": "Add 2 to input",
+                 "type": "unstyled",
+                 "depth": 0,
+                 "inlineStyleRanges": [
+                      {
+                         "offset": 4,
+                         "length": 1,
+                         "style": "BOLD"
+                      },
+                      {
+                          "offset": 4,
+                          "length": 1,
+                          "style": "ITALIC"
+                      },
+                      {
+                          "offset": 4,
+                          "length": 1,
+                          "style": "UNDERLINE"
+                      },
+                      {
+                          "offset": 4,
+                          "length": 1,
+                          "style": "CODE"
+                      }
+                 ],
+                 "entityRanges": [],
+                 "data": {}
+            },
+            {
+                "key": "f0qgo",
+                "text": "",
+                "type": "unstyled",
+                "depth": 0,
+                "inlineStyleRanges": [],
+                "entityRanges": [],
+                "data": {}
+            }
+        ],
+        "entityMap": {}
+    },
+}

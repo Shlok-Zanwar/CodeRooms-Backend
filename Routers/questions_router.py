@@ -7,7 +7,7 @@ from Functions.Token import getCurrentUser
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 from Functions.QuestionFunctions import createNewQuestion, sendQuestionDetails, saveQuestionTemplate, saveTestCases, \
-    saveQuestionSettings, getQuestionForUser, saveCodeForQuestion, getDueQuestions, runCode, submitCodeForQuestion
+    saveQuestionSettings, getQuestionForUser, saveCodeForQuestion, getDueQuestions, runCode, submitCodeForQuestion, deleteCurrentQuestion
 import time
 
 router = APIRouter(
@@ -194,3 +194,18 @@ def getQuestionUser(
 
     # return saveQuestionTemplate(questionId, json.loads(questionTemplate), tokenData, db)
     return getQuestionForUser(questionId, tokenData, db)
+
+
+@router.get('/delete_question')
+def deleteQuestion(
+        questionId: int,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    try:
+        tokenData = getCurrentUser(request.headers['Authorization'])
+    except:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
+
+    return deleteCurrentQuestion(questionId,tokenData,db)
+

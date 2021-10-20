@@ -5,7 +5,7 @@ from Functions.Token import getCurrentUser
 from pydantic import BaseModel
 from typing import Optional, List
 from Functions.MyRoomsFunctions import getMyRooms, createNewRoom, getRoomById, updateRoomById, getRoomMembers, \
-    modifyRoomMember, getQuestionSubmission, getSubmittedCode
+    modifyRoomMember, getQuestionSubmission, getSubmittedCode, deleteCurrentRoom
 import time
 
 router = APIRouter(
@@ -158,7 +158,7 @@ def removeMember(
 
 
 @router.get('/accept_room_member')
-def removeMember(
+def acceptMember(
         roomId: int,
         userId: int,
         request: Request,
@@ -170,3 +170,16 @@ def removeMember(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
 
     return modifyRoomMember(roomId, userId, tokenData, False, db)
+
+@router.get('/delete_room')
+def deleteRoom(
+        roomId: int,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    try:
+        tokenData = getCurrentUser(request.headers['Authorization'])
+    except:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
+
+    return deleteCurrentRoom(roomId,tokenData,db)
