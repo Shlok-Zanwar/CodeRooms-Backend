@@ -1,23 +1,22 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from Database import database, models
 from sqlalchemy.orm import Session
-from Functions.Token import getCurrentUser
 from pydantic import BaseModel
 from typing import  Optional, List
-from Functions.EnrolledFunctions import joinRoom, getEnrolledRooms, getEnrolledRoomById
 import time
+from Functions.MiscFunctions import verifyJWTToken
+from Functions.EnrolledFunctions import joinRoom, getEnrolledRooms, getEnrolledRoomById, leaveRoom
 
 router = APIRouter(
     tags=['Enrolled Rooms'],
-    # prefix="/auth"
 )
 
 get_db = database.get_db
 
+
 class JoinRoomSchema (BaseModel):
     roomId: int
     specialFields: List
-
 
 @router.post('/join_room')
 def joinRoomRoute(
@@ -25,14 +24,21 @@ def joinRoomRoute(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    # time.sleep(2)
-    print(schema.roomId)
-    try:
-        tokenData = getCurrentUser(request.headers['Authorization'])
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
-
+    tokenData = verifyJWTToken(request)
     return joinRoom(schema.roomId, schema.specialFields, tokenData, db)
+
+
+class LeaveRoomSchema (BaseModel):
+    roomId: int
+
+@router.post('/leave_room')
+def leaveRoomRoute(
+    schema: LeaveRoomSchema,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    tokenData = verifyJWTToken(request)
+    return leaveRoom(schema.roomId, tokenData, db)
 
 
 @router.get('/enrolled_rooms')
@@ -40,13 +46,9 @@ def enrolledRooms(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    time.sleep(2)
-    try:
-        tokenData = getCurrentUser(request.headers['Authorization'])
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
-
+    tokenData = verifyJWTToken(request)
     return getEnrolledRooms(tokenData, db)
+
 
 
 @router.get('/enrolled_rooms/{roomId}')
@@ -55,10 +57,5 @@ def EnrolledRoomById(
         request: Request,
         db: Session = Depends(get_db)
 ):
-    time.sleep(2)
-    try:
-        tokenData = getCurrentUser(request.headers['Authorization'])
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not validate credentials.")
-
+    tokenData = verifyJWTToken(request)
     return getEnrolledRoomById(roomId, tokenData, db)

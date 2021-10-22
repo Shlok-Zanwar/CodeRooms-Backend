@@ -1,3 +1,7 @@
-from Functions.AuthFunctions import sendOtp
+# from OldFunctions.AuthFunctions import sendOtp
+#
+# sendOtp("shlokzanwar14@gmail.com")
 
-sendOtp("shlokzanwar14@gmail.com")
+
+a = {"shlok": 123}
+print(a['shlok'])

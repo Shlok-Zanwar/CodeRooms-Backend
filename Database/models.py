@@ -19,7 +19,6 @@ class Users(Base):
     createdAt = Column(DateTime)
     verifiedAt = Column(DateTime)
 
-    isDeleted = Column(Boolean, nullable=False, default=False)
 
 class Rooms(Base):
     __tablename__ = 'Rooms'
@@ -32,7 +31,6 @@ class Rooms(Base):
     visibility = Column(String, nullable=False, default="private") # public/private/hidden
     createdAt = Column(DateTime, default=datetime.now())
 
-    isDeleted = Column(Boolean, nullable=False, default=False)
     specialFields = Column(JSON)
     # specialFields = [
     #     {
@@ -69,15 +67,23 @@ class Questions(Base):
 
     _type = Column(String)                          # Code, eg:-form .....
 
-    title = Column(String, nullable=False, default="String")
+    title = Column(String, nullable=False, default="Title")
     template = Column(JSON, nullable=False, default=[])
     testCases = Column(JSON, nullable=False, default=[])
     submissionCountAllowed = Column(Integer) #no of submissions allowed
 
-    isDeleted = Column(Boolean, nullable=False, default=False)
 
-class Submissions(Base):
-    __tablename__ = 'Submissions'
+class FileSubmissions(Base):
+    __tablename__ = 'FileSubmissions'
+
+    id = Column(Integer, primary_key=True, index=True, nullable=False)
+    userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
+    questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
+    fileName = Column(String, nullable=False, default="File")
+    submittedAt = Column(DateTime)
+
+class CodeSubmissions(Base):
+    __tablename__ = 'CodeSubmissions'
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
@@ -87,7 +93,6 @@ class Submissions(Base):
     language = Column(String)
     submittedAt = Column(DateTime)
 
-    isDeleted = Column(Boolean, nullable=False, default=False)
 
 class SavedCodes(Base):
     __tablename__ = 'SavedCodes'
@@ -98,6 +103,5 @@ class SavedCodes(Base):
     code = Column(String)
     language = Column(String)
     savedAt = Column(DateTime)
-
 
 
