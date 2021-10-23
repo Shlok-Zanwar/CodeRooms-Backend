@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, UploadFile, File
+from fastapi import APIRouter, Depends, Request, UploadFile, File, HTTPException, status
 from sqlalchemy import text
 from Database import database
 from sqlalchemy.orm import Session
@@ -84,8 +84,12 @@ def uploadFileRoute(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    print(file)
-    print(questionId)
+    try:
+        if int(request.headers['Content-Length']) > 7340032:
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"File should be less than 7mb.")
+    except:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"File should be less than 7mb.")
+
 
     tokenData = verifyJWTToken(request)
     return submitFileForQuestion(questionId, file, tokenData, db)

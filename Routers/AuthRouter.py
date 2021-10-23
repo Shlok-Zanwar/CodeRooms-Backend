@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from Database import database
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from Functions.AuthFunctions import handleLogin, createSignUp, verifyEmail
+from Functions.AuthFunctions import handleLogin, createSignUp, verifyEmail, reqChangePassword, changePassword, \
+    changeUsername
+from Functions.MiscFunctions import verifyJWTToken
 
 router = APIRouter(
     tags=['Auths'],
@@ -41,3 +43,31 @@ class UserLoginSchema (BaseModel):
 @router.post('/login')
 def postLogin(request: UserLoginSchema, db: Session = Depends(get_db)):
     return handleLogin(request, db)
+
+
+@router.get('/request_change_password')
+def postReqChangePassword(email: str, db: Session = Depends(get_db)):
+    return reqChangePassword(email, db)
+
+
+class ChangePasswordSchema (BaseModel):
+    email: str
+    password: str
+    otp: str
+
+@router.post('/change_password')
+def postChangePassword(request: ChangePasswordSchema, db: Session = Depends(get_db)):
+    return changePassword(request, db)
+
+
+class ChangeUsernameSchema (BaseModel):
+    userName: str
+
+@router.post('/change_username')
+def postChangeUsername(
+        schema: ChangeUsernameSchema,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    tokenData = verifyJWTToken(request)
+    return changeUsername(schema.userName, tokenData, db)

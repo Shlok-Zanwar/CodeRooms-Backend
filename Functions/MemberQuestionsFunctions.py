@@ -101,7 +101,7 @@ def getDueQuestions(tokenData, db: Session):
     allQuestions = []
     for room in allRooms:
         q = db.execute(text(f"""
-                        SELECT Q.id, Q.roomId, Q.title, Q.endTime, R.name
+                        SELECT Q.id, Q.roomId, Q.title, Q.endTime, R.name, Q._type
                         FROM Questions Q 
                         LEFT JOIN Rooms R on R.id = Q.roomId
                         WHERE roomId = {room[0]} AND Q.isVisible = TRUE
@@ -110,14 +110,24 @@ def getDueQuestions(tokenData, db: Session):
 
     dueData = []
     for question in allQuestions:
-        if (
-            db.execute(text(f"""
-                SELECT COUNT(*)
-                FROM CodeSubmissions
-                WHERE userId = {tokenData['userId']} AND questionId = {question[0]}
-            """)).fetchone()[0] == 0
-        ):
-            dueData.append(question)
+        if question[5] == "code":
+            if (
+                db.execute(text(f"""
+                    SELECT COUNT(*)
+                    FROM CodeSubmissions
+                    WHERE userId = {tokenData['userId']} AND questionId = {question[0]}
+                """)).fetchone()[0] == 0
+            ):
+                dueData.append(question)
+        else:
+            if (
+                db.execute(text(f"""
+                    SELECT COUNT(*)
+                    FROM FileSubmissions
+                    WHERE userId = {tokenData['userId']} AND questionId = {question[0]}
+                """)).fetchone()[0] == 0
+            ):
+                dueData.append(question)
 
     questions = []
     for question in dueData:
