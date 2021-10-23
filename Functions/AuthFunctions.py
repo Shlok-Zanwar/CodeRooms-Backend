@@ -1,7 +1,7 @@
 import time
 
 import pytz
-from sqlalchemy import text
+from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
@@ -98,9 +98,9 @@ def verifyEmail(request, db: Session):
 
 
 def handleLogin(request, db: Session):
-    user = db.query(models.Users).filter(models.Users.username == request.username).first()
+    user = db.query(models.Users).filter((models.Users.username == request.username) | (models.Users.email == request.username) ).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Username does not exist.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Username / Email does not exist.")
 
     if not user.isVerified:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Please verify your account.")
