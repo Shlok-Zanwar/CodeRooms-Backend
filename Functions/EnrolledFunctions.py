@@ -1,5 +1,5 @@
 import os
-
+from os import getenv
 import pytz
 from sqlalchemy.orm import Session
 from Database import models
@@ -185,7 +185,7 @@ def leaveRoom(roomId, tokenData, db: Session):
             """)).fetchone()
 
             if sub:
-                os.remove(os.getcwd() + f"/SavedFiles/Q_{question[0]}/SID_{sub[0]}.pdf")
+                os.remove(getenv("BASE_PATH") + f"/SavedFiles/Q_{question[0]}/SID_{sub[0]}.pdf")
                 db.execute(text(f"""
                                 DELETE FROM FileSubmissions
                                 WHERE id={sub[0]}

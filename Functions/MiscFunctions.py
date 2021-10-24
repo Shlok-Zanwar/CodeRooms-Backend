@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from passlib.context import CryptContext
 import smtplib, ssl
+from os import getenv
 
 # Inportant Constants
 SECRET_KEY = "ApnaSecretBhidu"
@@ -18,8 +19,8 @@ credentialsException = HTTPException(
 
 pwd_cxt = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-myEmailId = "projectforms1@gmail.com"
-myEmailPassword = "Pforms@123"
+myEmailId = getenv("email")
+myEmailPassword = getenv("emailPassword")
 
 
 # Token Functions

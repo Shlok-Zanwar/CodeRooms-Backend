@@ -1,6 +1,6 @@
 import json
 import os
-
+from os import getenv
 from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
@@ -216,7 +216,7 @@ def deleteRoom(roomId, db):
 
     for id in questionIds:
         if id[1] == "file":
-            dir = os.getcwd() + f"/SavedFiles/Q_{id[0]}"
+            dir = getenv("BASE_PATH") + f"/SavedFiles/Q_{id[0]}"
             for f in os.listdir(dir):
                 os.remove(os.path.join(dir, f))
             os.removedirs(dir)

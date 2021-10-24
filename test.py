@@ -25,10 +25,14 @@
 #
 # print(x.text)
 
-a = 123
-def funccc():
-    print("here")
-    return True
+# a = 123
+# def funccc():
+#     print("here")
+#     return True
+#
+# if a == 123 or funccc():
+#     print("yesssss")
+import os
 
-if a == 123 or funccc():
-    print("yesssss")
+print(os.getcwd())
+# C:\Users\princ\Documents\GitHub\CodeRooms-Backend

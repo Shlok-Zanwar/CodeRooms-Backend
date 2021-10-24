@@ -7,6 +7,7 @@ import pytz
 from Functions.MyRoomsFunctions import verifyRoomOwner
 import json
 import os
+from os import getenv
 import glob
 
 emptyDescription = {
@@ -109,7 +110,7 @@ def saveQuestionSettings(questionId, endTime, isVisible, tokenData, db: Session)
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Cannot delete Question.")
 
     a = pytz.timezone('Asia/Kolkata').localize(datetime.strptime(endTime, "%Y-%m-%d %H:%M:%S"))
-    print(a)
+    # print(a)
     question.endTime = a
     question.isVisible = isVisible
 
@@ -126,7 +127,7 @@ def deleteQuestion(questionId, tokenData, db: Session):
 
     if question._type == "file":
 
-        dir = os.getcwd() + f"/SavedFiles/Q_{questionId}"
+        dir = getenv("BASE_PATH") + f"/SavedFiles/Q_{questionId}"
         for f in os.listdir(dir):
             os.remove(os.path.join(dir, f))
         os.removedirs(dir)

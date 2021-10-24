@@ -32,14 +32,6 @@ class Rooms(Base):
     createdAt = Column(DateTime, default=datetime.now())
 
     specialFields = Column(JSON)
-    # specialFields = [
-    #     {
-    #         "field": "Name",
-    #     },
-    #     {
-    #         "field": "Gr No."
-    #     }
-    # ]
 
 
 class RoomMembers(Base):

@@ -1,7 +1,5 @@
-import time
-
+from os import getenv
 import pytz
-from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
@@ -13,7 +11,7 @@ from datetime import datetime
 
 def sendVerificationEmail(email):
     otp = random.randint(100000, 999999)
-    message = f"Verify your account for CodeRooms.\nClick :- http://localhost:3000/verify_email?email={email}&otp={str(otp)}"
+    message = f'Verify your account for CodeRooms.\nClick :- {getenv("FRONTEND_URL")}/verify_email?email={email}&otp={str(otp)}'
     # print(otp)
 
     msg = EmailMessage()
@@ -23,6 +21,7 @@ def sendVerificationEmail(email):
 
     sendMail(msg)
     return otp
+
 
 def sendOtp(email):
     otp = random.randint(100000, 999999)

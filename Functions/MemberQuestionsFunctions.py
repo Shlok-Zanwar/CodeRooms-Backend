@@ -1,5 +1,6 @@
 import json
 import os
+from os import getenv
 import requests
 from sqlalchemy.orm import Session
 from Database import models
@@ -100,6 +101,7 @@ def getDueQuestions(tokenData, db: Session):
 
     allQuestions = []
     for room in allRooms:
+
         q = db.execute(text(f"""
                         SELECT Q.id, Q.roomId, Q.title, Q.endTime, R.name, Q._type
                         FROM Questions Q 
@@ -110,6 +112,9 @@ def getDueQuestions(tokenData, db: Session):
 
     dueData = []
     for question in allQuestions:
+        if datetime.now(pytz.timezone('Asia/Kolkata')) > pytz.timezone('Asia/Kolkata').localize(datetime.strptime(question[3], "%Y-%m-%d %H:%M:%S.%f")):
+            continue
+
         if question[5] == "code":
             if (
                 db.execute(text(f"""
@@ -137,6 +142,7 @@ def getDueQuestions(tokenData, db: Session):
             "title": question[2],
             "endTime": question[3],
             "roomName": question[4],
+            "_type": question[5]
         })
 
     return {"due": questions}
@@ -183,8 +189,16 @@ def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
     if not isAllowed:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
 
+    # db.query(models.SavedCodes).filter((models.SavedCodes.questionId == questionId) & (models.SavedCodes.userId == tokenData['userId']) ).update(
+    #     {
+    #         "code": code,
+    #         "language": language
+    #     }
+    # )
+    # db.commit()
+
     savedCode = db.execute(text(f"""
-                    SELECT id FROM SavedCodes 
+                    SELECT id FROM SavedCodes
                     WHERE questionId={questionId} AND userId={tokenData['userId']}
                 """)).fetchone()
 
@@ -199,30 +213,15 @@ def saveCodeForQuestion(questionId, code, language, tokenData, db: Session):
         )
         db.add(newEntry)
         db.commit()
-        # db.refresh(newEntry)
     else:
-        db.execute(text(f"""
-                            DELETE FROM SavedCodes WHERE id = {savedCode[0]}
-                        """))
-
-        newEntry = models.SavedCodes(
-            userId=tokenData['userId'],
-            questionId=questionId,
-            code=code,
-            savedAt=datetime.now(pytz.timezone('Asia/Kolkata')),
-            language=language
+        db.query(models.SavedCodes).filter_by(questionId = questionId, userId = tokenData['userId'] ).update(
+            {
+                "code": code,
+                "language": language
+            }
         )
-        db.add(newEntry)
         db.commit()
 
-        # db.execute(text(f"""
-        #                     UPDATE SavedCodes
-        #                     SET code = {code},
-        #                     savedAt = {datetime.now(pytz.timezone('Asia/Kolkata'))},
-        #                     language = {language}
-        #                     WHERE id={savedCode[0]}
-        #                 """))
-        # db.commit()
 
     return True
 
@@ -245,7 +244,7 @@ def submitCodeForQuestion(questionId, code, language, tokenData, db: Session):
     if not isAllowed:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
 
-    print(question.endTime)
+    # print(question.endTime)
     if datetime.now(pytz.timezone('Asia/Kolkata')) > pytz.timezone('Asia/Kolkata').localize(question.endTime):
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Due date over")
 
@@ -272,24 +271,18 @@ def submitCodeForQuestion(questionId, code, language, tokenData, db: Session):
         db.add(newEntry)
         db.commit()
     else:
-        db.execute(text(f"""
-                                DELETE FROM CodeSubmissions WHERE id = {submittedCode[0]}
-                            """))
-
-        newEntry = models.CodeSubmissions(
-            userId=tokenData['userId'],
-            questionId=questionId,
-            code=code,
-            submittedAt=datetime.now(pytz.timezone('Asia/Kolkata')),
-            language=language,
-            testCasesPassed=casesPassed,
+        db.query(models.CodeSubmissions).filter_by(questionId=questionId, userId=tokenData['userId']).update(
+            {
+                "code": code,
+                "language": language
+            }
         )
-        db.add(newEntry)
         db.commit()
+
     saveCodeForQuestion(questionId, code, language, tokenData, db)
 
-    return f"{casesPassed} out of {len(question.testCases)} cases passed."
-
+    return {"casesPassed": casesPassed, "noOfCases": len(question.testCases)}
+    # return f"{casesPassed} out of {len(question.testCases)} cases passed."
 
 
 def deleteSubmittedFile(questionId, submissionId, tokenData, db: Session):
@@ -303,8 +296,8 @@ def deleteSubmittedFile(questionId, submissionId, tokenData, db: Session):
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You donot have acceess.")
 
 
-    if os.path.exists(os.getcwd() + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf"):
-        os.remove(os.getcwd() + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf")
+    if os.path.exists(getenv("BASE_PATH") + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf"):
+        os.remove(getenv("BASE_PATH") + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf")
         db.execute(text(f"""
                         DELETE FROM FileSubmissions 
                         WHERE id={submissionId}
@@ -349,7 +342,7 @@ def submitFileForQuestion(questionId, file, tokenData, db: Session):
     db.commit()
     db.refresh(newEntry)
 
-    file_name = os.getcwd() + f"/SavedFiles/Q_{questionId}/SID_{newEntry.id}.pdf"
+    file_name = getenv("BASE_PATH") + f"/SavedFiles/Q_{questionId}/SID_{newEntry.id}.pdf"
     with open(file_name, 'wb+') as f:
         f.write(file.file.read())
         f.close()

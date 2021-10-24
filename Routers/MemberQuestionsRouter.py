@@ -6,7 +6,7 @@ from Functions.MiscFunctions import verifyJWTToken, decodeJWTToken, credentialsE
 from pydantic import BaseModel
 from Functions.MemberQuestionsFunctions import questionForMember, getDueQuestions, runCode,\
     saveCodeForQuestion, submitCodeForQuestion, submitFileForQuestion, deleteSubmittedFile
-import os
+from os import getenv
 from fastapi.responses import FileResponse
 
 router = APIRouter(
@@ -126,7 +126,7 @@ def uploadFileRoute(
         raise credentialsException
     else:
         if sqlData[0] == tokenData['userId']:
-            return FileResponse(os.getcwd() + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf")
+            return FileResponse(getenv("BASE_PATH") + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf")
         else:
             data2 = db.execute(text(f"""
                         SELECT createdBy FROM Questions 
@@ -136,7 +136,7 @@ def uploadFileRoute(
                 raise credentialsException
             else:
                 if data2[0] == tokenData['userId']:
-                    return FileResponse(os.getcwd() + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf")
+                    return FileResponse(getenv("BASE_PATH") + f"/SavedFiles/Q_{questionId}/SID_{submissionId}.pdf")
                 else:
                     raise credentialsException
 

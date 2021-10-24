@@ -23,4 +23,10 @@ app.include_router(MyRoomsRouter.router)
 app.include_router(MyQuestionsRouter.router)
 
 if __name__ == '__main__':
+    from os import mkdir, listdir, getenv
+    if 'SavedFiles' not in listdir(getenv("BASE_PATH")):
+        data_path = getenv("BASE_PATH") + '/SavedFiles'
+        mkdir(data_path)
+        mkdir(data_path + '/db')
+
     uvicorn.run("main:app", host="localhost", port=8000, reload=True)
