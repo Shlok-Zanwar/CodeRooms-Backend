@@ -3,7 +3,7 @@ from Database import database
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from Functions.AuthFunctions import handleLogin, createSignUp, verifyEmail, reqChangePassword, changePassword, \
-    changeUsername
+    changeUsername, resendVerifyEmail
 from Functions.MiscFunctions import verifyJWTToken
 
 router = APIRouter(
@@ -71,3 +71,10 @@ def postChangeUsername(
 ):
     tokenData = verifyJWTToken(request)
     return changeUsername(schema.userName, tokenData, db)
+
+@router.get('/resend_verification_link')
+def getResendVerifyEmail(
+        username: str,
+        db: Session = Depends(get_db)
+):
+    return resendVerifyEmail(username, db)

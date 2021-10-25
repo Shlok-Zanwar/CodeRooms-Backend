@@ -57,7 +57,7 @@ def createSignUp(request, db: Session):
         print(e)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Username or email already exists.")
 
-    return newUser
+    return True
 
 
 def verifyEmail(request, db: Session):
@@ -102,7 +102,7 @@ def handleLogin(request, db: Session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Username / Email does not exist.")
 
     if not user.isVerified:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Please verify your account.")
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Please verify your account.")
 
     if not verifyPassword(user.password, request.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Incorrect password.")
@@ -201,3 +201,24 @@ def changeUsername(newUsername, tokenData, db: Session):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+def resendVerifyEmail(username, db: Session):
+    user = db.query(models.Users).filter(
+        (models.Users.username == username) | (models.Users.email == username)).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Username / Email does not exist.")
+
+    if user.isVerified:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Email already verified.")
+
+
+    message = f'Verify your account for CodeRooms.\nClick :- {getenv("FRONTEND_URL")}/verify_email?email={user.email}&otp={str(user.otp)}'
+    # print(otp)
+
+    msg = EmailMessage()
+    msg.set_content(message)
+    msg['Subject'] = 'Verify Account.'
+    msg['To'] = user.email
+
+    sendMail(msg)
+    return True
