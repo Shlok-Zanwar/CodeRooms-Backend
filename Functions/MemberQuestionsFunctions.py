@@ -112,7 +112,7 @@ def getDueQuestions(tokenData, db: Session):
 
     dueData = []
     for question in allQuestions:
-        if datetime.now(pytz.timezone('Asia/Kolkata')) > pytz.timezone('Asia/Kolkata').localize(datetime.strptime(question[3], "%Y-%m-%d %H:%M:%S.%f")):
+        if datetime.now(pytz.timezone('Asia/Kolkata')) > pytz.timezone('Asia/Kolkata').localize(question[3]):
             continue
 
         if question[5] == "code":

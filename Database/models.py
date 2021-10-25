@@ -8,12 +8,12 @@ class Users(Base):
     __tablename__ = 'Users'
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
-    username = Column(String, unique=True)
-    fname = Column(String)
-    lname = Column(String)
-    email = Column(String, unique=True, nullable=False)
-    password = Column(String, nullable=False)
-    otp = Column(String)
+    username = Column(String(750), unique=True)
+    fname = Column(String(750))
+    lname = Column(String(750))
+    email = Column(String(750), unique=True, nullable=False)
+    password = Column(String(750), nullable=False)
+    otp = Column(String(750))
     isVerified = Column(Boolean, nullable=False, default=False)
     _try = Column(Integer, nullable=False, default=0)
     createdAt = Column(DateTime)
@@ -25,13 +25,13 @@ class Rooms(Base):
 
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     ownerId = Column(Integer, ForeignKey("Users.id"), nullable=False)
-    name = Column(String)
+    name = Column(String(750))
     # enrolled = Column(Integer, nullable=False, default=0)
     waitingRoomEnabled = Column(Boolean, nullable=False, default=False)
-    visibility = Column(String, nullable=False, default="private") # public/private/hidden
+    visibility = Column(String(750), nullable=False, default="private") # public/private/hidden
     createdAt = Column(DateTime, default=datetime.now())
 
-    specialFields = Column(String)
+    specialFields = Column(String(750))
 
 
 class RoomMembers(Base):
@@ -41,7 +41,7 @@ class RoomMembers(Base):
     roomId = Column(Integer, ForeignKey("Rooms.id"), nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     joinedAt = Column(DateTime)
-    specialFields = Column(String)
+    specialFields = Column(String(750))
     inWaitingRoom = Column(Boolean, nullable=False)
     isRejected = Column(Boolean, nullable=False)
 
@@ -57,11 +57,11 @@ class Questions(Base):
     endTime = Column(DateTime)
     isVisible = Column(Boolean, nullable=False, default=True)
 
-    _type = Column(String)                          # Code, eg:-form .....
+    _type = Column(String(750))                          # Code, eg:-form .....
 
-    title = Column(String, nullable=False, default="Title")
-    template = Column(String)
-    testCases = Column(String)
+    title = Column(String(750), nullable=False, default="Title")
+    template = Column(String(750))
+    testCases = Column(String(750))
     submissionCountAllowed = Column(Integer) #no of submissions allowed
 
 
@@ -71,7 +71,7 @@ class FileSubmissions(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
-    fileName = Column(String, nullable=False, default="File")
+    fileName = Column(String(750), nullable=False, default="File")
     submittedAt = Column(DateTime)
 
 class CodeSubmissions(Base):
@@ -80,9 +80,9 @@ class CodeSubmissions(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
-    code = Column(String)
+    code = Column(String(750))
     testCasesPassed = Column(Integer)
-    language = Column(String)
+    language = Column(String(750))
     submittedAt = Column(DateTime)
 
 
@@ -92,8 +92,8 @@ class SavedCodes(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
-    code = Column(String)
-    language = Column(String)
+    code = Column(String(750))
+    language = Column(String(750))
     savedAt = Column(DateTime)
 
 
