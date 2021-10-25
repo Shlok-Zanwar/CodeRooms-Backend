@@ -15,7 +15,7 @@ def createNewRoom(roomName, tokenData, db: Session):
         ownerId = tokenData['userId'],
         name = roomName,
         createdAt = datetime.now(pytz.timezone('Asia/Kolkata')),
-        specialFields = []
+        specialFields = json.dumps([])
     )
 
     db.add(newRoom)
@@ -38,7 +38,7 @@ def updateRoomSettings(roomInfo, tokenData, db: Session):
     room.name = roomInfo.roomName
     room.visibility = roomInfo.visibility
     room.waitingRoomEnabled = roomInfo.waitingRoomEnabled
-    room.specialFields = roomInfo.specialFields
+    room.specialFields = json.dumps(roomInfo.specialFields)
 
     db.commit()
     db.refresh(room)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, BIGINT, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from Database.database import Base
 from datetime import datetime
 
@@ -31,7 +31,7 @@ class Rooms(Base):
     visibility = Column(String, nullable=False, default="private") # public/private/hidden
     createdAt = Column(DateTime, default=datetime.now())
 
-    specialFields = Column(JSON)
+    specialFields = Column(String)
 
 
 class RoomMembers(Base):
@@ -41,7 +41,7 @@ class RoomMembers(Base):
     roomId = Column(Integer, ForeignKey("Rooms.id"), nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     joinedAt = Column(DateTime)
-    specialFields = Column(JSON)
+    specialFields = Column(String)
     inWaitingRoom = Column(Boolean, nullable=False)
     isRejected = Column(Boolean, nullable=False)
 
@@ -60,8 +60,8 @@ class Questions(Base):
     _type = Column(String)                          # Code, eg:-form .....
 
     title = Column(String, nullable=False, default="Title")
-    template = Column(JSON, nullable=False, default=[])
-    testCases = Column(JSON, nullable=False, default=[])
+    template = Column(String)
+    testCases = Column(String)
     submissionCountAllowed = Column(Integer) #no of submissions allowed
 
 

@@ -33,6 +33,9 @@
 # if a == 123 or funccc():
 #     print("yesssss")
 import os
+import json
+
+print(json.dumps({}))
 
 print(os.getcwd())
 # C:\Users\princ\Documents\GitHub\CodeRooms-Backend

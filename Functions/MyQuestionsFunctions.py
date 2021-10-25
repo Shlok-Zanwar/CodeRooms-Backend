@@ -32,15 +32,15 @@ def createNewQuestion(roomId, type, tokenData, db: Session):
         createdBy = tokenData['userId'],
         title = "Title",
         createdAt = datetime.now(pytz.timezone('Asia/Kolkata')),
-        template = {
+        template = json.dumps({
             "description": emptyDescription,
             "sample": {
                 "input": "",
                 "output": "",
                 "explanation": "",
             },
-        },
-        testCases = [],
+        }),
+        testCases = json.dumps([]),
         _type = type,
         endTime = datetime.now(tz=pytz.timezone('Asia/Kolkata')).replace(hour=23, minute=59, second=59) + timedelta(days=7)
     )
@@ -70,8 +70,8 @@ def getQuestionDetails(questionId, tokenData, db: Session):
         "endTime": question.endTime,
         "isVisible": question.isVisible,
         "title": question.title,
-        "template": question.template,
-        "testCases": question.testCases,
+        "template": json.loads(question.template),
+        "testCases": json.loads(question.testCases),
         "submissionCountAllowed": question.submissionCountAllowed,
     }
 
@@ -85,7 +85,7 @@ def saveQuestionTemplate(questionId, title, template, tokenData, db: Session):
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Invalid question Id.")
 
     question.title = title
-    question.template = template
+    question.template = json.dumps(template)
 
     db.commit()
     return True
@@ -97,7 +97,7 @@ def saveTestCases(questionId, cases, tokenData, db: Session):
     if not question or question.createdBy != tokenData['userId']:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Cannot delete Question.")
 
-    question.testCases = cases
+    question.testCases = json.dumps(cases)
 
     db.commit()
     return True
@@ -165,14 +165,14 @@ def getQuestionSubmission(questionId, tokenData, db: Session):
     roomDetails = {
         "roomName": room.name,
         "roomId": room.id,
-        "specialFields": room.specialFields
+        "specialFields": json.loads(room.specialFields)
     }
 
     questionDetails = {
         "title": question.title,
-        "template": question.template,
+        "template": json.loads(question.template),
         "endTime": question.endTime,
-        "testCases": len(question.testCases),
+        "testCases": len(json.loads(question.testCases)),
         "_type": question._type,
     }
 

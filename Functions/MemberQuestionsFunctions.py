@@ -44,7 +44,7 @@ def questionForMember(questionId, tokenData, db: Session):
             "roomName": room.name,
             "endTime": question.endTime,
             "title": question.title,
-            "template": question.template,
+            "template": json.loads(question.template),
             "_type": question._type,
             "submitted": False
         }
@@ -71,7 +71,7 @@ def questionForMember(questionId, tokenData, db: Session):
             "roomName": room.name,
             "endTime": question.endTime,
             "title": question.title,
-            "template": question.template,
+            "template": json.loads(question.template),
             "_type": question._type,
             "submitted": False
         }
@@ -250,7 +250,7 @@ def submitCodeForQuestion(questionId, code, language, tokenData, db: Session):
 
 
     casesPassed = 0
-    for case in question.testCases:
+    for case in json.loads(question.testCases):
         if json.loads(runCode(language, code, case['input']))['output'] == case['output']:
             casesPassed += 1
 
@@ -281,7 +281,7 @@ def submitCodeForQuestion(questionId, code, language, tokenData, db: Session):
 
     saveCodeForQuestion(questionId, code, language, tokenData, db)
 
-    return {"casesPassed": casesPassed, "noOfCases": len(question.testCases)}
+    return {"casesPassed": casesPassed, "noOfCases": len(json.loads(question.testCases))}
     # return f"{casesPassed} out of {len(question.testCases)} cases passed."
 
 

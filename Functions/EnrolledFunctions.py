@@ -50,7 +50,7 @@ def joinRoom(roomId, specialFields, tokenData, db: Session):
         joinedAt = datetime.now(pytz.timezone('Asia/Kolkata')),
         inWaitingRoom = waitingRoomEnabled,
         isRejected = False,
-        specialFields = specialFields
+        specialFields = json.dumps(specialFields)
     )
 
     db.add(newMember)
