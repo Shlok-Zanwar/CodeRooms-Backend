@@ -274,7 +274,8 @@ def submitCodeForQuestion(questionId, code, language, tokenData, db: Session):
         db.query(models.CodeSubmissions).filter_by(questionId=questionId, userId=tokenData['userId']).update(
             {
                 "code": code,
-                "language": language
+                "language": language,
+                "testCasesPassed": casesPassed
             }
         )
         db.commit()
