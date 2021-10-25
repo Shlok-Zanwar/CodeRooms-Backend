@@ -185,26 +185,52 @@ def getRoomMembers(roomId, waiting, db: Session ):
 
     members = []
     for member in roomMembers:
+        submitted = 0
+        if not waiting:
+            questions = db.execute(text(f"""
+                                    SELECT id, _type FROM Questions 
+                                    WHERE isVisible = TRUE AND roomId = {roomId};
+                                """)).fetchall()
+            for question in questions:
+                if (question[1] == "code"):
+                    submitted += min(
+                        db.execute(text(f"""
+                                    SELECT COUNT(*) FROM CodeSubmissions 
+                                    WHERE questionId = {question[0]} AND userId = {member[0]} ;
+                                """)).fetchone()[0], 1)
+                else:
+                    submitted += min(
+                        db.execute(text(f"""
+                                    SELECT COUNT(*) FROM FileSubmissions 
+                                    WHERE questionId = {question[0]} AND userId = {member[0]} ;
+                                """)).fetchone()[0], 1)
+
         members.append({
             "userId": member[0],
             "userName": member[1],
             "email": member[2],
             "name": member[3] + " " + member[4],
             "tableId": member[5],
-            "specialFields": json.loads(member[6])
+            "specialFields": json.loads(member[6]),
+            "questionsSubmitted": submitted
         })
 
     return {"members": members}
 
 
 def modifyRoomMember(roomId, userId, reject, db: Session):
-    db.execute(text(f"""
-                        UPDATE RoomMembers
-                        SET isRejected = {reject}, inWaitingRoom = FALSE
-                        WHERE userId = {userId} AND roomId = {roomId}
-                    """))
+    if reject:
+        db.execute(text(f"""
+                            DELETE FROM RoomMembers
+                            WHERE userId = {userId} AND roomId = {roomId}
+                        """))
+    else:
+        db.execute(text(f"""
+                            UPDATE RoomMembers
+                            SET isRejected = FALSE, inWaitingRoom = FALSE
+                            WHERE userId = {userId} AND roomId = {roomId}
+                        """))
     db.commit()
-
     return True
 
 
