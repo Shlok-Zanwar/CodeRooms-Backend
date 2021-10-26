@@ -46,7 +46,8 @@ def createSignUp(request, db: Session):
             username = request.username,
             otp = sendVerificationEmail(request.email),
             isVerified = False,
-            createdAt = datetime.now(pytz.timezone('Asia/Kolkata'))
+            createdAt = datetime.now(pytz.timezone('Asia/Kolkata')),
+            accountType = 0
         )
 
     try:
@@ -113,7 +114,8 @@ def handleLogin(request, db: Session):
             "userId": user.id,
             "firstName": user.fname,
             "lastName": user.lname,
-            "email": user.email
+            "email": user.email,
+            "accountType": user.accountType
         }
     )
     return {"access_token": access_token, "token_type": "bearer" }
