@@ -228,12 +228,7 @@ def resendVerifyEmail(username, db: Session):
 
 
 def changeAccountType(userId, accountType, tokenData, db: Session):
-    user = db.query(models.Users).filter(models.Users.id == tokenData['userId']).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User does not exist.")
-
-    if user.accountType != 7:
+    if tokenData['accountType'] != 7:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid Operation.")
 
     db.execute(text(f"""

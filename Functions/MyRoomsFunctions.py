@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.sql import text
 from datetime import datetime
 import pytz
+
+from Functions.EnrolledFunctions import leaveRoom
 from Functions.MemberQuestionsFunctions import deleteSubmittedFile
 
 
@@ -220,6 +222,7 @@ def getRoomMembers(roomId, waiting, db: Session ):
 
 def modifyRoomMember(roomId, userId, reject, db: Session):
     if reject:
+        leaveRoom(roomId, {"userId": userId}, db)
         db.execute(text(f"""
                             DELETE FROM RoomMembers
                             WHERE userId = {userId} AND roomId = {roomId}
