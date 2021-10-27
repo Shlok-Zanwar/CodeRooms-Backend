@@ -3,7 +3,7 @@ from Database import database
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from Functions.AuthFunctions import handleLogin, createSignUp, verifyEmail, reqChangePassword, changePassword, \
-    changeUsername, resendVerifyEmail
+    changeUsername, resendVerifyEmail, changeAccountType
 from Functions.MiscFunctions import verifyJWTToken
 
 router = APIRouter(
@@ -78,3 +78,17 @@ def getResendVerifyEmail(
         db: Session = Depends(get_db)
 ):
     return resendVerifyEmail(username, db)
+
+
+class ChangeAccountTypeSchema (BaseModel):
+    userId: int
+    accountType: int
+
+@router.get('/change_account_type')
+def postChangeAccountType(
+        schema: ChangeAccountTypeSchema,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    tokenData = verifyJWTToken(request)
+    return changeAccountType(schema.userId, schema.accountType, tokenData, db)
