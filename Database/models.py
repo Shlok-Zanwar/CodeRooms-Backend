@@ -18,6 +18,7 @@ class Users(Base):
     _try = Column(Integer, nullable=False, default=0)
     createdAt = Column(DateTime)
     verifiedAt = Column(DateTime)
+    accountType = Column(Integer)
 
 
 class Rooms(Base):

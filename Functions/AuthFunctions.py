@@ -1,5 +1,6 @@
 from os import getenv
 import pytz
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from Database import models
 from fastapi import HTTPException, status
@@ -46,7 +47,8 @@ def createSignUp(request, db: Session):
             username = request.username,
             otp = sendVerificationEmail(request.email),
             isVerified = False,
-            createdAt = datetime.now(pytz.timezone('Asia/Kolkata'))
+            createdAt = datetime.now(pytz.timezone('Asia/Kolkata')),
+            accountType = 0
         )
 
     try:
@@ -113,7 +115,8 @@ def handleLogin(request, db: Session):
             "userId": user.id,
             "firstName": user.fname,
             "lastName": user.lname,
-            "email": user.email
+            "email": user.email,
+            "accountType": user.accountType
         }
     )
     return {"access_token": access_token, "token_type": "bearer" }
@@ -221,4 +224,17 @@ def resendVerifyEmail(username, db: Session):
     msg['To'] = user.email
 
     sendMail(msg)
+    return True
+
+
+def changeAccountType(userId, accountType, tokenData, db: Session):
+    if tokenData['accountType'] != 7:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid Operation.")
+
+    db.execute(text(f"""
+        UPDATE Users
+        SET accountType = {accountType}
+        WHERE id={userId}; 
+    """))
+
     return True
