@@ -236,5 +236,6 @@ def changeAccountType(userId, accountType, tokenData, db: Session):
         SET accountType = {accountType}
         WHERE id={userId} 
     """))
+    db.commit()
 
     return True
