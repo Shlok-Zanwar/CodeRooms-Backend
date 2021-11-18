@@ -84,7 +84,7 @@ class ChangeAccountTypeSchema (BaseModel):
     userId: int
     accountType: int
 
-@router.get('/change_account_type')
+@router.post('/change_account_type')
 def postChangeAccountType(
         schema: ChangeAccountTypeSchema,
         request: Request,

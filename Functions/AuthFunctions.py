@@ -234,7 +234,7 @@ def changeAccountType(userId, accountType, tokenData, db: Session):
     db.execute(text(f"""
         UPDATE Users
         SET accountType = {accountType}
-        WHERE id={userId}; 
+        WHERE id={userId} 
     """))
 
     return True
