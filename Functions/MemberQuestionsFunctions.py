@@ -96,7 +96,8 @@ def questionForMember(questionId, tokenData, db: Session):
 
 def getDueQuestions(tokenData, db: Session):
     allRooms = db.execute(text(f"""
-        SELECT roomId FROM RoomMembers WHERE userId = {tokenData['userId']}
+        SELECT roomId FROM RoomMembers WHERE userId = {tokenData['userId']} 
+        AND inWaitingRoom = FALSE AND isRejected = FALSE
     """)).fetchall()
 
     allQuestions = []

@@ -39,7 +39,10 @@ def joinRoom(roomId, specialFields, tokenData, db: Session):
             raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Unable to join room.")
 
         if roomMemberInfo[0]:
-            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You are already in waiting room.")
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You are already in waiting room for {roomName}.")
+        else:
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"You are already in room {roomName}.")
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Unable to join room.")
 
     if len(specialFieldsDB) != len(specialFields):
         return {"specialFields": specialFieldsDB}

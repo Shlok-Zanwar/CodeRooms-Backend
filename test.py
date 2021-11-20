@@ -10,7 +10,6 @@
 # # b = pytz.timezone('Asia/Kolkata').localize(a)
 # # print(b)
 #
-# import requests
 #
 # url = 'https://codexweb.netlify.app/.netlify/functions/enforceCode'
 # myobj = {
@@ -32,10 +31,40 @@
 #
 # if a == 123 or funccc():
 #     print("yesssss")
-import os
+# import os
 import json
-
-print(json.dumps({}))
-
-print(os.getcwd())
+#
+# print(json.dumps({}))
+#
+# print(os.getcwd())
 # C:\Users\princ\Documents\GitHub\CodeRooms-Backend
+
+
+import requests
+from concurrent.futures import ThreadPoolExecutor
+
+
+urls = ["https://api.smart-iam.com/api/coderooms/auth/change_username"]*500
+count = 0
+def doSomething(url):
+    global count
+
+    count += 1
+    # payload = {"questionId": "21",
+    #            "code": "#include <iostream>\r\nusing namespace std;\r\n\r\nint main()\r\n{\r\n    int firstNumber, secondNumber, sumOfTwoNumbers;\r\n    \r\n    cin >> firstNumber >> secondNumber;\r\n\r\n    // sum of two numbers in stored in variable sumOfTwoNumbers\r\n    sumOfTwoNumbers = firstNumber + secondNumber;\r\n\r\n    cout << sumOfTwoNumbers;     \r\n\r\n    return 0;\r\n}",
+    #            "language": "cpp"}
+    payload = {"userName": f"Parag_{str(1)}"}
+    print(payload)
+
+    x = requests.post(url, data=json.dumps(payload), headers={
+        'Content-Type': 'application/json',
+        'Authorization': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6IlBhcmFnXzEiLCJ1c2VySWQiOjUsImZpcnN0TmFtZSI6IlBhcmFnIiwibGFzdE5hbWUiOiJKYWRoYXYiLCJlbWFpbCI6InBhcmFnMjgwNEBnbWFpbC5jb20iLCJhY2NvdW50VHlwZSI6bnVsbCwiZXhwIjoxNjM3NDU1ODY0fQ.cEPd5PlaJW8XQgQsvPuPl93qhbIWxXPG7N-O523aqc4"
+    })
+    return (json.loads(x.text)["token_type"])
+
+# for i in range(100):
+#     doSomething()
+
+with ThreadPoolExecutor(max_workers=100) as pool:
+    response_list = list(pool.map(doSomething, urls))
+    print(response_list)
