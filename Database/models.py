@@ -81,7 +81,7 @@ class CodeSubmissions(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
-    code = Column(String(1000))
+    code = Column(String(10000))
     testCasesPassed = Column(Integer)
     language = Column(String(750))
     submittedAt = Column(DateTime)
@@ -93,7 +93,7 @@ class SavedCodes(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False)
     userId = Column(Integer, ForeignKey("Users.id"), nullable=False)
     questionId = Column(Integer, ForeignKey("Questions.id"), nullable=False)
-    code = Column(String(750))
+    code = Column(String(10000))
     language = Column(String(750))
     savedAt = Column(DateTime)
 
