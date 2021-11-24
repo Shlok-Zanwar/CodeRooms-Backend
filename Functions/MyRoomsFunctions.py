@@ -279,3 +279,79 @@ def deleteRoom(roomId, db):
 
     db.commit()
     return True
+
+
+def allQuestionsStudent(roomId, tokenData, db: Session):
+    jsonData = getRoomById(roomId, tokenData, db)
+
+    roomInfo = jsonData["roomInfo"]
+    questions = jsonData["questions"]
+
+    enrolledStudents = getRoomMembers(roomId, False, db)["members"]
+
+    for enr in enrolledStudents:
+        enr["submissions"] = []
+        for question in questions:
+            if question["type"] == "code":
+                subData = db.execute(text(f"""
+                                SELECT id, testCasesPassed, submittedAt 
+                                FROM CodeSubmissions 
+                                WHERE userId={enr["userId"]} AND questionId = {question["questionId"]}
+                            """)).fetchone()
+
+                if not subData:
+                    subId = 0
+                    tCasesPassed = 0
+                    stime = 0
+                else:
+                    subId = subData[0]
+                    tCasesPassed = subData[1]
+                    stime = subData[2]
+
+                enr["submissions"].append({
+                    "questionId": question["questionId"],
+                    "submissionId": subId,
+                    "tCasesPassed": tCasesPassed,
+                    "submittedAt": stime
+                })
+            elif question["type"] == "file":
+                subData = db.execute(text(f"""
+                                SELECT id, submittedAt 
+                                FROM FileSubmissions 
+                                WHERE userId={enr["userId"]} AND questionId = {question["questionId"]}
+                            """)).fetchone()
+
+                if not subData:
+                    subId = 0
+                    stime = 0
+                else:
+                    subId = subData[0]
+                    stime = subData[1]
+
+                enr["submissions"].append({
+                    "questionId": question["questionId"],
+                    "submissionId": subId,
+                    "submittedAt": stime
+                })
+            else:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Some error occured.")
+
+
+    allNewQuestions = []
+    for question in questions:
+        a = db.query(models.Questions).filter(models.Questions.id == question["questionId"]).first()
+        allNewQuestions.append({
+            "questionId": a.id,
+            "title": a.title,
+            "template": json.loads(a.template),
+            "endTime": a.endTime,
+            "testCases": len(json.loads(a.testCases)),
+            "_type": a._type,
+        })
+
+    return {
+        "roomInfo": roomInfo,
+        "questions": allNewQuestions,
+        "enrolled": enrolledStudents
+    }
+

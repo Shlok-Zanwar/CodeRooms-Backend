@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from Functions.MiscFunctions import verifyJWTToken
 from pydantic import BaseModel
 from typing import List
-from Functions.MyRoomsFunctions import createNewRoom, updateRoomSettings, getMyRooms, getRoomById, getRoomMembers, verifyRoomOwner, modifyRoomMember, deleteRoom
-
+from Functions.MyRoomsFunctions import createNewRoom, updateRoomSettings, getMyRooms, getRoomById, getRoomMembers, \
+    verifyRoomOwner, modifyRoomMember, deleteRoom, allQuestionsStudent
 
 router = APIRouter(
     tags=['My Rooms'],
@@ -125,3 +125,13 @@ def deleteRoomRoute(
     tokenData = verifyJWTToken(request)
     verifyRoomOwner(schema.roomId, tokenData, db)
     return deleteRoom(schema.roomId, db)
+
+
+@router.get('/all_submissions/{roomId}')
+def allQuestionsStudentRoute(
+        roomId,
+        request: Request,
+        db: Session = Depends(get_db)
+):
+    tokenData = verifyJWTToken(request)
+    return allQuestionsStudent(roomId, tokenData, db)
